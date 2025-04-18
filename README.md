@@ -2,64 +2,43 @@
 
 This repository implements a simple Agent-to-Agent (A2A) communication example based on Google's A2A protocol. A2A is Google's proposed standard for enabling AI agents to communicate with each other through a standardized API.
 
-## Overview
+This document provides an in-depth technical exploration of Google’s Agent2Agent (A2A) protocol and reference implementation, covering its architecture, core specifications, sample agents and host applications, message flow, and practical setup instructions.
 
-The implementation consists of two main components:
+## 📝 Overview
 
-1. **Server (server.py)**: A Flask-based server that implements the A2A protocol endpoints:
-   - `/.well-known/agent.json` - Provides the agent's metadata (Agent Card)
-   - `/tasks/send` - Accepts and processes tasks from other agents
+The Agent2Agent (A2A) protocol is an open standard developed by Google to enable seamless communication and interoperability between independent AI agents built on diverse frameworks or by different vendors. By defining a common JSON‑RPC over HTTP(S) interface, A2A allows agents to discover each other’s capabilities, negotiate interaction modes (text, forms, files, audio/video), and collaborate on tasks securely and efficiently.
 
-2. **Client (client.py)**: A simple client that demonstrates how to:
-   - Discover an agent by fetching its Agent Card
-   - Send a task to the agent
-   - Process the agent's response
+## ⚙️ Core Concepts
 
-The example agent has web search capabilities using Brave Search through the Model Context Protocol (MCP).
+### Agent Card
 
-## Setup
+An Agent Card is a public metadata file (typically hosted at `/.well-known/agent.json`) that describes an agent’s capabilities, supported endpoints, authentication requirements, and skills. Clients use the Agent Card for service discovery and capability negotiation.
+### A2A Server & Client
 
-1. Create a virtual environment:
+- **A2A Server**: An HTTP endpoint implementing A2A protocol methods (`tasks/send`, `tasks/sendSubscribe`, `tasks/pushNotification/set`). It receives client requests, orchestrates task execution, and returns updates or artifacts.
+- **A2A Client**: An application or agent that consumes A2A services by sending requests to a server’s URL and handling responses or streaming events.
 
-   **Windows**:
-   ```
-   python -m venv venv
-   venv\Scripts\activate
-   ```
+### Task Lifecycle
 
-   **macOS/Linux**:
-   ```
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
+Tasks are the central units of work exchanged between agents. Each task has a unique ID and passes through states: `submitted` → `working` → (`input-required` if extra data is needed) → `completed` or `failed` or `canceled`.
 
-2. Create a `.env` file based on the `.env.example` template:
-   ```
-   OPENAI_API_KEY=your_openai_api_key
-   BRAVE_API_KEY=your_brave_api_key
-   ```
+### Messages and Parts
 
-3. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+- **Message**: A turn in the conversation with roles (`user` for client, `agent` for server) and a list of `Parts`.
+- **Part**: The atomic content unit within a `Message` or `Artifact`. Can be:
+  - `TextPart` for plain text.
+  - `FilePart` carrying file bytes or URIs.
+  - `DataPart` for structured JSON (e.g., web forms).
 
-4. Run the server:
-   ```
-   python server.py
-   ```
+### Artifacts
 
-5. In a separate terminal, run the client (make sure to activate the virtual environment first):
-   ```
-   python client.py
-   ```
+Artifacts represent outputs that an agent generates during a task (e.g., generated files, final structured data), each containing one or more `Parts`.
 
-## A2A Protocol
+### Streaming & Push Notifications
 
-Google's A2A protocol defines a standard way for agents to communicate with each other through HTTP endpoints. The key components include:
+- **Streaming**: For long-running tasks, clients can subscribe via `tasks/sendSubscribe` and receive Server-Sent Events (SSE) with `TaskStatusUpdateEvent` or `TaskArtifactUpdateEvent` messages for real-time progress.
+- **Push Notifications**: Servers supporting `pushNotifications` can send proactive updates to a client-provided webhook URL configured via `tasks/pushNotification/set`.
 
-- **Agent Card**: A JSON document that describes an agent's capabilities and endpoints
-- **Task API**: Endpoints for sending tasks to agents and receiving responses
-- **Standardized Message Format**: A consistent structure for messages exchanged between agents
+## 📜 Specification
 
-For more information on Google's A2A protocol, refer to the official documentation.
+The full A2A protocol is defined by a JSON schema located at `specification/json/a2a.json`, detailing data structures for agent cards, tasks, messages, parts, artifacts, and error handling. This 46.9 KB schema serves as the formal specification for any compliant implementation.
